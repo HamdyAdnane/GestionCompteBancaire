@@ -29,7 +29,7 @@ namespace GestionCompteBancaire
                 int choix = ChoixMenu();
                 if (choix == 1)
                 {
-                    var CompteBancaireToInsert = new CompteBancaire
+                    var CompteBancaireToInsert = new InformationCompteBancaire
                     {
                         Reference = Read.ReadString("Entrer un Reference : "),
                         Libelle = Read.ReadString("Entrer un Libelle : "),
@@ -76,10 +76,10 @@ namespace GestionCompteBancaire
                     command.CommandType = CommandType.Text;
                     connection.Open();
                     SqlDataReader reader = command.ExecuteReader();
-                    CompteBancaire compteBancaire;
+                    InformationCompteBancaire compteBancaire;
                     while (reader.Read())
                     {
-                        compteBancaire = new CompteBancaire
+                        compteBancaire = new InformationCompteBancaire
                         {
                             Id = reader.GetInt32("Id"),
                             Reference = reader.GetString("Reference"),
@@ -92,7 +92,7 @@ namespace GestionCompteBancaire
                 }
                 else if (choix == 3)
                 {
-                    var CompteBancaireToDelete = new CompteBancaire
+                    var CompteBancaireToDelete = new InformationCompteBancaire
                     {
                         Id = Read.ReadInt("Entre L'ID Pour Delete :")
                     };
@@ -114,7 +114,7 @@ namespace GestionCompteBancaire
                 }
                 else if (choix == 4)
                 {
-                    var CompteBancaireToUpdate = new CompteBancaire
+                    var CompteBancaireToUpdate = new InformationCompteBancaire
                     {
                         Id = Read.ReadInt("Donnez-moi l'ID dont vous modifiez les propriétés : "),
                         Reference = Read.ReadString("Entrer Nouveau Reference : "),

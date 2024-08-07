@@ -1,6 +1,6 @@
 ﻿namespace GestionCompteBancaire.ConsoleApp
 {
-    public class CompteBancaire
+    public class InformationCompteBancaire
     {
         public int Id { get; set; }
         public string? Reference { get; set; }
