@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using GestionCompteBancaire.ConsoleApp;
-using ReadValeur;
+﻿using GestionCompteBancaire.ConsoleApp;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
-using System.Net.Sockets;
+using ReadValeur;
+using System.Data;
 
 
 namespace GestionCompteBancaire
@@ -69,7 +65,7 @@ namespace GestionCompteBancaire
                     command.Parameters.Add(SocieteParameter);
                     command.CommandType = CommandType.Text;
                     connection.Open();
-                    CompteBancaireToInsert.Id = (int) command.ExecuteScalar();
+                    CompteBancaireToInsert.Id = (int)command.ExecuteScalar();
                     Console.WriteLine($"Compte Bancaire {CompteBancaireToInsert.Id} ajouté avec succès ");
                     connection.Close();
                 }
