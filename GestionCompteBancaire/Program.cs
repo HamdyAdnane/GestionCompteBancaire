@@ -1,8 +1,10 @@
-﻿using GestionCompteBancaire.ConsoleApp;
+﻿using Dapper;
+using GestionCompteBancaire.ConsoleApp;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using ReadValeur;
 using System.Data;
+using System.Net.Sockets;
 
 
 namespace GestionCompteBancaire
@@ -23,7 +25,7 @@ namespace GestionCompteBancaire
         public void UserCommand()
         {
             var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-            SqlConnection connection = new SqlConnection(configuration.GetSection("ConnectionString").Value);
+            IDbConnection dbConnection = new SqlConnection(configuration.GetSection("ConnectionString").Value);
             do
             {
                 int choix = ChoixMenu();
@@ -35,82 +37,42 @@ namespace GestionCompteBancaire
                         Libelle = Read.ReadString("Entrer un Libelle : "),
                         Societe = Read.ReadString("Entrer un Societe : ")
                     };
-                    var insertion = "INSERT INTO CompteBancaire (Reference,Libelle,Societe) VALUES" +
-                        $"(@Reference,@Libelle,@Societe);" +
-                        $"SELECT CAST (scope_identity() AS int)";
-                    SqlParameter ReferenceParameter = new SqlParameter
+                    var sql = "INSERT INTO CompteBancaire (Reference,Libelle,Societe) VALUES" +
+                        $"(@Reference,@Libelle,@Societe)" +
+                        $"SELECT CAST (scope_identity() AS int);";
+                    var parameters = new
                     {
-                        ParameterName = "@Reference",
-                        SqlDbType = SqlDbType.VarChar,
-                        Direction = ParameterDirection.Input,
-                        Value = CompteBancaireToInsert.Reference
+                        Reference = CompteBancaireToInsert.Reference,
+                        Libelle = CompteBancaireToInsert.Libelle,
+                        Societe = CompteBancaireToInsert.Societe
                     };
-                    SqlParameter LibelleParameter = new SqlParameter
-                    {
-                        ParameterName = "@Libelle",
-                        SqlDbType = SqlDbType.VarChar,
-                        Direction = ParameterDirection.Input,
-                        Value = CompteBancaireToInsert.Libelle
-                    };
-                    SqlParameter SocieteParameter = new SqlParameter
-                    {
-                        ParameterName = "@Societe",
-                        SqlDbType = SqlDbType.VarChar,
-                        Direction = ParameterDirection.Input,
-                        Value = CompteBancaireToInsert.Societe
-                    };
-                    SqlCommand command = new SqlCommand(insertion, connection);
-                    command.Parameters.Add(ReferenceParameter);
-                    command.Parameters.Add(LibelleParameter);
-                    command.Parameters.Add(SocieteParameter);
-                    command.CommandType = CommandType.Text;
-                    connection.Open();
-                    CompteBancaireToInsert.Id = (int)command.ExecuteScalar();
-                    Console.WriteLine($"Compte Bancaire {CompteBancaireToInsert.Id} ajouté avec succès ");
-                    connection.Close();
+                    CompteBancaireToInsert.Id = dbConnection.Query<int>(sql, parameters).Single();
+                    Console.WriteLine($"Compte Bancaire {CompteBancaireToInsert} ajouté avec succès ");
+                    Console.WriteLine();
                 }
                 else if (choix == 2)
                 {
                     var affichage = "SELECT * FROM CompteBancaire";
-                    SqlCommand command = new SqlCommand(affichage, connection);
-                    command.CommandType = CommandType.Text;
-                    connection.Open();
-                    SqlDataReader reader = command.ExecuteReader();
-                    InformationCompteBancaire compteBancaire;
-                    while (reader.Read())
-                    {
-                        compteBancaire = new InformationCompteBancaire
-                        {
-                            Id = reader.GetInt32("Id"),
-                            Reference = reader.GetString("Reference"),
-                            Libelle = reader.GetString("Libelle"),
-                            Societe = reader.GetString("Societe")
-                        };
-                        Console.WriteLine(compteBancaire);
-                    }
-                    connection.Close();
+                    var result = dbConnection.Query<InformationCompteBancaire>(affichage);
+                    foreach(var item in result)
+                        Console.WriteLine(item);
+                    Console.WriteLine();
                 }
                 else if (choix == 3)
                 {
                     var CompteBancaireToDelete = new InformationCompteBancaire
                     {
-                        Id = Read.ReadInt("Entre L'ID Pour Delete :")
+                        Id = Read.ReadInt("Entre L'ID Pour Supprimer :")
                     };
-                    var supprimer = "DELETE FROM CompteBancaire WHERE Id = @Id";
-                    SqlParameter IdParameter = new SqlParameter
-                    {
-                        ParameterName = "@Id",
-                        SqlDbType = SqlDbType.Int,
-                        Direction = ParameterDirection.Input,
-                        Value = CompteBancaireToDelete.Id
-                    };
-                    SqlCommand command = new SqlCommand(supprimer, connection);
-                    command.Parameters.Add(IdParameter);
-                    command.CommandType = CommandType.Text;
-                    connection.Open();
-                    if (command.ExecuteNonQuery() > 0)
-                        Console.WriteLine($"Compte bancaire Supprimé avec succès");
-                    connection.Close();
+                    var supprimer = "DELETE FROM CompteBancaire WHERE Id = @Id;";
+                    var parameter =
+                        new
+                        {
+                            Id = CompteBancaireToDelete.Id
+                        };
+                    dbConnection.Execute(supprimer, parameter);
+                    Console.WriteLine($"Compte bancaire Supprimé avec succès");
+                    Console.WriteLine();
                 }
                 else if (choix == 4)
                 {
@@ -121,45 +83,18 @@ namespace GestionCompteBancaire
                         Libelle = Read.ReadString("Entrer Nouveau Libelle : "),
                         Societe = Read.ReadString("Entrer Nouveau Societe : ")
                     };
-                    var modification = "UPDATE CompteBancaire SET Reference = @Reference, Libelle = @Libelle ,Societe = @Societe WHERE Id = @Id";
-                    SqlParameter IdParameter = new SqlParameter
-                    {
-                        ParameterName = "@Id",
-                        SqlDbType = SqlDbType.Int,
-                        Direction = ParameterDirection.Input,
-                        Value = CompteBancaireToUpdate.Id
-                    };
-                    SqlParameter ReferenceParameter = new SqlParameter
-                    {
-                        ParameterName = "@Reference",
-                        SqlDbType = SqlDbType.VarChar,
-                        Direction = ParameterDirection.Input,
-                        Value = CompteBancaireToUpdate.Reference
-                    };
-                    SqlParameter LibelleParameter = new SqlParameter
-                    {
-                        ParameterName = "@Libelle",
-                        SqlDbType = SqlDbType.VarChar,
-                        Direction = ParameterDirection.Input,
-                        Value = CompteBancaireToUpdate.Libelle
-                    };
-                    SqlParameter SocieteParameter = new SqlParameter
-                    {
-                        ParameterName = "@Societe",
-                        SqlDbType = SqlDbType.VarChar,
-                        Direction = ParameterDirection.Input,
-                        Value = CompteBancaireToUpdate.Societe
-                    };
-                    SqlCommand command = new SqlCommand(modification, connection);
-                    command.Parameters.Add(IdParameter);
-                    command.Parameters.Add(ReferenceParameter);
-                    command.Parameters.Add(LibelleParameter);
-                    command.Parameters.Add(SocieteParameter);
-                    command.CommandType = CommandType.Text;
-                    connection.Open();
-                    if (command.ExecuteNonQuery() > 0)
-                        Console.WriteLine($"Compte bancaire mis à jour avec succès.");
-                    connection.Close();
+                    var modification = "UPDATE CompteBancaire SET Reference = @Reference, Libelle = @Libelle ,Societe = @Societe WHERE Id = @Id;";
+                    var parameter =
+                        new
+                        {
+                            Id = CompteBancaireToUpdate.Id,
+                            Reference = CompteBancaireToUpdate.Reference,
+                            Libelle = CompteBancaireToUpdate.Libelle,
+                            Societe = CompteBancaireToUpdate.Societe
+                        };
+                    dbConnection.Execute(modification, parameter);
+                    Console.WriteLine($"Compte bancaire mis à jour avec succès.");
+                    Console.WriteLine();
                 }
                 else if (choix == 5)
                 {
